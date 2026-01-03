@@ -11,10 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     suits.forEach(suit => {
         for (let i = suit.start; i <= suit.end; i++) {
             let rank = i;
-            if (i === 11) rank = 'J';
-            else if (i === 12) rank = 'Q';
-            else if (i === 13) rank = 'K';
-            else if (i === 14) rank = 'A';
+            if (i === 11) rank = 'J'; else if (i === 12) rank = 'Q';
+            else if (i === 13) rank = 'K'; else if (i === 14) rank = 'A';
             cardImages.push(`${suit.name}${rank}.png`);
         }
     });
@@ -23,25 +21,34 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLevel = 1;
     let maxLevel = 100;
     let timer = null;
+    let maxTime = 0; // 타임 바 계산용 전체 시간
     let timeLeft = 0;
-    let cards = [];
     let flippedCards = [];
     let matchedPairs = 0;
     let totalPairs = 0;
     let isGameActive = false;
     let isProcessing = false;
     let isMuted = false;
+    let isPaused = false; // 일시 정지 상태
 
     // DOM 요소
     const boardEl = document.getElementById('game-board');
     const levelDisplay = document.getElementById('level-display');
     const timeDisplay = document.getElementById('timer-display');
+    const timerBar = document.getElementById('timer-bar'); // 타임 바
+
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modal-title');
     const modalMsg = document.getElementById('modal-msg');
     const modalBtn = document.getElementById('modal-btn');
+
     const startOverlay = document.getElementById('start-overlay');
     const startBtn = document.getElementById('start-btn');
+
+    const pauseOverlay = document.getElementById('pause-overlay');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resumeBtn = document.getElementById('resume-btn');
+
     const muteBtn = document.getElementById('mute-btn');
 
     // 오디오 요소
@@ -50,8 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sfxMatch = document.getElementById('sfx-match');
     const sfxClear = document.getElementById('sfx-clear');
 
-    // 오디오 볼륨 설정
-    audioBgm.volume = 0.3; // 배경음악은 약간 작게
+    audioBgm.volume = 0.3;
     sfxFlip.volume = 0.5;
     sfxMatch.volume = 0.6;
     sfxClear.volume = 0.6;
@@ -59,9 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // === 2. 오디오 기능 ===
     function playSound(audioElement) {
         if (isMuted) return;
-        // 연속 재생을 위해 재생 위치를 0으로 초기화
         audioElement.currentTime = 0;
-        audioElement.play().catch(e => console.log('Audio play error:', e));
+        audioElement.play().catch(e => {});
     }
 
     function toggleMute() {
@@ -70,23 +75,41 @@ document.addEventListener('DOMContentLoaded', () => {
             audioBgm.pause();
             muteBtn.textContent = '🔇';
         } else {
-            if (isGameActive) audioBgm.play();
+            if (isGameActive && !isPaused) audioBgm.play();
             muteBtn.textContent = '🔊';
         }
     }
-
     muteBtn.addEventListener('click', toggleMute);
 
-    // === 3. 게임 로직 ===
+    // === 3. 일시 정지 기능 ===
+    function togglePause() {
+        if (!isGameActive || isProcessing) return; // 게임 중이 아니면 무시
 
+        if (isPaused) {
+            // 게임 재개
+            isPaused = false;
+            pauseOverlay.classList.add('hidden');
+            pauseBtn.textContent = '⏸';
+            startTimer(); // 타이머 다시 시작
+            if (!isMuted) audioBgm.play();
+        } else {
+            // 일시 정지
+            isPaused = true;
+            pauseOverlay.classList.remove('hidden');
+            pauseBtn.textContent = '▶';
+            clearInterval(timer); // 타이머 멈춤
+            audioBgm.pause();
+        }
+    }
+
+    pauseBtn.addEventListener('click', togglePause);
+    resumeBtn.addEventListener('click', togglePause);
+
+    // === 4. 게임 로직 ===
     function loadProgress() {
         const savedLevel = localStorage.getItem('memoryGameLevel');
-        if (savedLevel) {
-            currentLevel = parseInt(savedLevel, 10);
-            if (currentLevel > maxLevel) currentLevel = 1;
-        } else {
-            currentLevel = 1;
-        }
+        currentLevel = savedLevel ? parseInt(savedLevel, 10) : 1;
+        if (currentLevel > maxLevel) currentLevel = 1;
     }
 
     function saveProgress(level) {
@@ -110,33 +133,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return { pairs, time, cols };
     }
 
-    // 게임 시작 (초기화)
     function startGame(level) {
         currentLevel = level;
         levelDisplay.textContent = currentLevel;
         saveProgress(currentLevel);
 
         const config = getLevelConfig(currentLevel);
+        maxTime = config.time; // 최대 시간 저장
         timeLeft = config.time;
         totalPairs = config.pairs;
         matchedPairs = 0;
         flippedCards = [];
         isProcessing = false;
+        isPaused = false;
 
         timeDisplay.textContent = timeLeft;
 
+        // 타임 바 초기화
+        timerBar.style.width = '100%';
+        timerBar.classList.remove('warning');
+
         setupBoard(config);
 
-        // UI 및 오디오 처리
         modal.classList.add('hidden');
         startOverlay.classList.add('hidden');
+        pauseOverlay.classList.add('hidden');
         isGameActive = true;
 
         startTimer();
 
-        if (!isMuted) {
-            audioBgm.play().catch(e => console.log('BGM Autoplay prevented'));
-        }
+        if (!isMuted) audioBgm.play().catch(e => {});
     }
 
     function setupBoard(config) {
@@ -147,11 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let shuffledAssets = [...cardImages].sort(() => 0.5 - Math.random());
         let selectedAssets = shuffledAssets.slice(0, config.pairs);
 
-        selectedAssets.forEach(asset => {
-            deck.push(asset);
-            deck.push(asset);
-        });
-
+        selectedAssets.forEach(asset => { deck.push(asset); deck.push(asset); });
         deck.sort(() => 0.5 - Math.random());
 
         deck.forEach((imgSrc, index) => {
@@ -159,29 +181,22 @@ document.addEventListener('DOMContentLoaded', () => {
             card.classList.add('card');
             card.dataset.id = index;
             card.dataset.image = imgSrc;
-
             card.innerHTML = `
                 <div class="card-inner">
-                    <div class="card-front">
-                        <img src="assets/${imgSrc}" alt="card">
-                    </div>
-                    <div class="card-back">
-                        <img src="assets/back.png" alt="back">
-                    </div>
+                    <div class="card-front"><img src="assets/${imgSrc}" alt="card"></div>
+                    <div class="card-back"><img src="assets/back.png" alt="back"></div>
                 </div>
             `;
-
             card.addEventListener('click', () => flipCard(card));
             boardEl.appendChild(card);
         });
     }
 
     function flipCard(card) {
-        // 첫 클릭 버그 수정: 게임 활성화 상태 확인 및 처리 중복 방지 강화
-        if (!isGameActive || isProcessing) return;
+        // 일시 정지 중이면 클릭 무시
+        if (!isGameActive || isProcessing || isPaused) return;
         if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
 
-        // 효과음 재생
         playSound(sfxFlip);
 
         card.classList.add('flipped');
@@ -197,8 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const [card1, card2] = flippedCards;
 
         if (card1.dataset.image === card2.dataset.image) {
-            // 매칭 성공
-            // 약간의 딜레이 후 효과음과 처리를 하여 자연스럽게
             setTimeout(() => {
                 playSound(sfxMatch);
                 card1.classList.add('matched');
@@ -207,12 +220,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 flippedCards = [];
                 isProcessing = false;
 
-                if (matchedPairs === totalPairs) {
-                    levelClear();
+                if (timeLeft < 10) {
+                    timeLeft += 5;
                 }
+
+                if (timeLeft < 20) {
+                    timeLeft += 5;
+                    updateTimeBar();
+                }
+
+                if (matchedPairs === totalPairs) levelClear();
             }, 200);
         } else {
-            // 매칭 실패
             setTimeout(() => {
                 card1.classList.remove('flipped');
                 card2.classList.remove('flipped');
@@ -222,11 +241,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function updateTimeBar() {
+        timeDisplay.textContent = timeLeft;
+        // 타임 바 업데이트
+        const percentage = (timeLeft / maxTime) * 100;
+        timerBar.style.width = `${percentage}%`;
+    }
+
     function startTimer() {
         if (timer) clearInterval(timer);
         timer = setInterval(() => {
             timeLeft--;
-            timeDisplay.textContent = timeLeft;
+            updateTimeBar();
+
+            // 5초 이하 경고 (빨간색)
+            if (timeLeft <= 5) {
+                timerBar.classList.add('warning');
+            }
 
             if (timeLeft <= 0) {
                 gameOver();
@@ -238,14 +269,12 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(timer);
         isGameActive = false;
         audioBgm.pause();
-        playSound(sfxClear); // 클리어 효과음
+        playSound(sfxClear);
 
         if (currentLevel >= maxLevel) {
             showModal("축하합니다!", "모든 레벨을 클리어하셨습니다!", "처음으로", () => startGame(1));
         } else {
-            showModal("성공!", `레벨 ${currentLevel} 클리어!`, "다음 레벨", () => {
-                startGame(currentLevel + 1);
-            });
+            showModal("성공!", `레벨 ${currentLevel} 클리어!`, "다음 레벨", () => startGame(currentLevel + 1));
         }
     }
 
@@ -253,9 +282,10 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(timer);
         isGameActive = false;
         audioBgm.pause();
-        showModal("시간 초과", "다시 도전해보세요.", "재시작", () => {
-            startGame(currentLevel);
-        });
+        // 타임 바 0으로 확실히 처리
+        timerBar.style.width = '0%';
+
+        showModal("시간 초과", "다시 도전해보세요.", "재시작", () => startGame(currentLevel));
     }
 
     function showModal(title, msg, btnText, callback) {
@@ -263,20 +293,18 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMsg.textContent = msg;
         modalBtn.textContent = btnText;
         modal.classList.remove('hidden');
-
-        modalBtn.onclick = () => {
-            callback();
-        };
+        modalBtn.onclick = () => callback();
     }
 
-    // F2키 처리
+    // F2키 처리 (일시 정지 오버레이가 떠있어도 동작)
     window.addEventListener('keydown', (e) => {
         if (e.key === 'F2') {
             e.preventDefault();
-            if (isGameActive || !modal.classList.contains('hidden')) {
+            if (isGameActive || isPaused || !modal.classList.contains('hidden')) {
+                // F2 누르면 일시정지 로직 등으로 꼬이지 않게 타이머 해제 먼저 수행
+                clearInterval(timer);
                 const choice = confirm("게임을 중지하고 새로 시작하시겠습니까?");
                 if (choice) {
-                    clearInterval(timer);
                     const fullReset = confirm("1레벨부터 초기화 하시겠습니까? (취소 시 현재 레벨 재시작)");
                     if(fullReset) {
                         saveProgress(1);
@@ -284,18 +312,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         startGame(currentLevel);
                     }
+                } else {
+                    // 취소 시 게임이 진행 중이었고 일시정지 상태가 아니었다면 타이머 재개
+                    if (isGameActive && !isPaused) startTimer();
                 }
             }
         }
     });
 
-    // === 초기 실행 흐름 수정 (첫 클릭 버그 해결) ===
     loadProgress();
-
-    // 바로 startGame을 하지 않고, "게임 시작" 버튼 이벤트를 기다림
-    startBtn.addEventListener('click', () => {
-        // 브라우저 오디오 권한 획득을 위해 빈 오디오 재생 시도 등은 필요 없으나,
-        // 사용자 인터랙션 후 BGM 재생은 안전함.
-        startGame(currentLevel);
-    });
+    startBtn.addEventListener('click', () => startGame(currentLevel));
 });

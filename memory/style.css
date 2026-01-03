@@ -1,47 +1,73 @@
-/* 기존 CSS 내용 유지하되 아래 내용 추가/수정 */
+/* 기존 스타일 유지 + 추가/수정 내용 */
 
-/* 소리 버튼 스타일 */
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body { background-color: #2E8B57; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+
+/* 상단 정보창 레이아웃 개선 */
+.game-info {
+    width: 100%;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between; /* 양쪽 정렬 */
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.4);
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.info-group, .control-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.info-box {
+    font-size: 1.2rem;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+/* 타임 바 스타일 */
+.timer-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.progress-bg {
+    width: 150px; /* 바 길이 */
+    height: 10px;
+    background-color: #555;
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid #777;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 100%;
+    background-color: #4CAF50; /* 기본 녹색 */
+    transition: width 1s linear, background-color 0.3s; /* 부드러운 줄어듦 */
+}
+
+/* 5초 이하 경고 색상 */
+.progress-bar.warning {
+    background-color: #FF4500; /* 붉은색 */
+    box-shadow: 0 0 10px #FF4500;
+}
+
 .icon-btn {
     background: none;
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
     color: white;
-    margin-left: 10px;
+    transition: transform 0.1s;
 }
+.icon-btn:active { transform: scale(0.9); }
 
-/* 모달 및 오버레이 공통 스타일 */
-.modal {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.8); /* 배경을 조금 더 어둡게 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-}
-
-.hidden { display: none !important; }
-
-/* 시작 오버레이는 항상 최상위 */
-#start-overlay {
-    z-index: 200;
-}
-
-.modal-content {
-    background: white;
-    padding: 30px 50px;
-    border-radius: 10px;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    min-width: 300px;
-}
-
-/* 나머지 기존 CSS는 그대로 유지 */
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-body { background-color: #2E8B57; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
-.game-info { width: 100%; padding: 15px; display: flex; justify-content: center; align-items: center; gap: 20px; background-color: rgba(0, 0, 0, 0.3); color: white; font-size: 1.2rem; font-weight: bold; }
+/* 게임 컨테이너 및 카드 (기존 유지) */
 .game-container { flex: 1; display: flex; justify-content: center; align-items: center; width: 100%; padding: 20px; }
 .board { display: grid; gap: 10px; max-width: 1000px; max-height: 80vh; }
 .card { position: relative; width: 80px; height: 110px; cursor: pointer; perspective: 1000px; }
@@ -53,6 +79,33 @@ body { background-color: #2E8B57; font-family: sans-serif; display: flex; flex-d
 .card-front img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
 .card-back { background-color: #222; }
 .card-back img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+
+/* 모달 및 오버레이 */
+.modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85); /* 배경 불투명도 높임 (카드 가리기 위함) */
+    display: flex; justify-content: center; align-items: center;
+    z-index: 100;
+}
+.hidden { display: none !important; }
+#start-overlay { z-index: 200; }
+#pause-overlay { z-index: 150; } /* 일시정지는 모달보다 높지만 시작보다는 낮게 */
+
+.modal-content {
+    background: white; padding: 30px 50px; border-radius: 10px;
+    text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.5); min-width: 300px;
+}
 .modal-content h2 { margin-bottom: 15px; }
-.modal-content button { padding: 10px 20px; margin-top: 20px; font-size: 1rem; cursor: pointer; background-color: #2E8B57; color: white; border: none; border-radius: 5px; }
-@media (max-width: 600px) { .card { width: 50px; height: 70px; } .board { gap: 5px; } }
+.modal-content button {
+    padding: 10px 20px; margin-top: 20px; font-size: 1rem;
+    cursor: pointer; background-color: #2E8B57; color: white;
+    border: none; border-radius: 5px;
+}
+
+@media (max-width: 600px) {
+    .card { width: 50px; height: 70px; }
+    .board { gap: 5px; }
+    .progress-bg { width: 100px; } /* 모바일에서 바 길이 조정 */
+    .game-info { font-size: 0.9rem; }
+    .icon-btn { font-size: 1.2rem; }
+}

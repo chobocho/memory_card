@@ -14,14 +14,33 @@
 <audio id="sfx-clear" src="assets/clear.mp3"></audio>
 
 <div class="game-info">
-    <div class="info-box">LEVEL <span id="level-display">1</span></div>
-    <div class="info-box">TIME <span id="timer-display">00</span></div>
-    <div class="info-box">F2: 재시작</div>
-    <button id="mute-btn" class="icon-btn">🔊</button>
+    <div class="info-group">
+        <div class="info-box">LEVEL <span id="level-display">1</span></div>
+        <div class="timer-container">
+            <div class="info-box">TIME <span id="timer-display">00</span></div>
+            <div class="progress-bg">
+                <div id="timer-bar" class="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <button id="pause-btn" class="icon-btn" title="일시정지">⏸</button>
+        <div class="info-box" style="font-size: 0.9rem;">F2: 재시작</div>
+        <button id="mute-btn" class="icon-btn" title="소리 켜기/끄기">🔊</button>
+    </div>
 </div>
 
 <div class="game-container">
     <div id="game-board" class="board"></div>
+</div>
+
+<div id="pause-overlay" class="modal hidden">
+    <div class="modal-content">
+        <h2>PAUSED</h2>
+        <p>게임이 일시 정지되었습니다.</p>
+        <button id="resume-btn">게임 재개</button>
+    </div>
 </div>
 
 <div id="start-overlay" class="modal">
