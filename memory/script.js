@@ -53,8 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 오디오 요소
     const sfxFlip = document.getElementById('sfx-flip');
+    sfxFlip.src = "data:audio/mp3;base64," + flip_audio;
     const sfxMatch = document.getElementById('sfx-match');
+    sfxMatch.src = "data:audio/mp3;base64," + match_audio;
     const sfxClear = document.getElementById('sfx-clear');
+    sfxClear.src = "data:audio/mp3;base64," + clear_audio;
 
     sfxFlip.volume = 0.5;
     sfxMatch.volume = 0.6;
