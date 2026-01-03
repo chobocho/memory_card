@@ -52,12 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const muteBtn = document.getElementById('mute-btn');
 
     // 오디오 요소
-    const audioBgm = document.getElementById('bgm');
     const sfxFlip = document.getElementById('sfx-flip');
     const sfxMatch = document.getElementById('sfx-match');
     const sfxClear = document.getElementById('sfx-clear');
 
-    audioBgm.volume = 0.3;
     sfxFlip.volume = 0.5;
     sfxMatch.volume = 0.6;
     sfxClear.volume = 0.6;
@@ -72,10 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleMute() {
         isMuted = !isMuted;
         if (isMuted) {
-            audioBgm.pause();
             muteBtn.textContent = '🔇';
         } else {
-            if (isGameActive && !isPaused) audioBgm.play();
             muteBtn.textContent = '🔊';
         }
     }
@@ -91,14 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
             pauseOverlay.classList.add('hidden');
             pauseBtn.textContent = '⏸';
             startTimer(); // 타이머 다시 시작
-            if (!isMuted) audioBgm.play();
         } else {
             // 일시 정지
             isPaused = true;
             pauseOverlay.classList.remove('hidden');
             pauseBtn.textContent = '▶';
             clearInterval(timer); // 타이머 멈춤
-            audioBgm.pause();
         }
     }
 
@@ -161,8 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
         isGameActive = true;
 
         startTimer();
-
-        if (!isMuted) audioBgm.play().catch(e => {});
     }
 
     function setupBoard(config) {
@@ -268,7 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function levelClear() {
         clearInterval(timer);
         isGameActive = false;
-        audioBgm.pause();
         playSound(sfxClear);
 
         if (currentLevel >= maxLevel) {
@@ -281,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameOver() {
         clearInterval(timer);
         isGameActive = false;
-        audioBgm.pause();
         // 타임 바 0으로 확실히 처리
         timerBar.style.width = '0%';
 
