@@ -3,19 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chobocho's 메모리 게임 V1.0</title>
+    <title>솔로 메모리 게임</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<audio id="bgm" src="assets/bgm.mp3" loop></audio>
+<audio id="sfx-flip" src="assets/flip.mp3"></audio>
+<audio id="sfx-match" src="assets/match.mp3"></audio>
+<audio id="sfx-clear" src="assets/clear.mp3"></audio>
 
 <div class="game-info">
     <div class="info-box">LEVEL <span id="level-display">1</span></div>
     <div class="info-box">TIME <span id="timer-display">00</span></div>
     <div class="info-box">F2: 재시작</div>
+    <button id="mute-btn" class="icon-btn">🔊</button>
 </div>
 
 <div class="game-container">
     <div id="game-board" class="board"></div>
+</div>
+
+<div id="start-overlay" class="modal">
+    <div class="modal-content">
+        <h2>솔로 메모리 게임</h2>
+        <p>같은 그림을 찾아보세요!</p>
+        <button id="start-btn">게임 시작</button>
+    </div>
 </div>
 
 <div id="modal" class="modal hidden">

@@ -1,14 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 9. 카드 이미지 자산 목록 생성
+    // === 1. 자산 및 변수 설정 ===
     const suits = [
-        { name: 'S', start: 2, end: 14 }, // Spade (11=J, 12=Q, 13=K, 14=A)
-        { name: 'D', start: 2, end: 14 }, // Diamond
-        { name: 'H', start: 2, end: 14 }, // Heart
-        { name: 'C', start: 2, end: 13 }  // Clover (CK까지, CA없음 요구사항 반영)
+        { name: 'S', start: 2, end: 14 },
+        { name: 'D', start: 2, end: 14 },
+        { name: 'H', start: 2, end: 14 },
+        { name: 'C', start: 2, end: 13 }
     ];
 
     const cardImages = [];
-
     suits.forEach(suit => {
         for (let i = suit.start; i <= suit.end; i++) {
             let rank = i;
@@ -16,15 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (i === 12) rank = 'Q';
             else if (i === 13) rank = 'K';
             else if (i === 14) rank = 'A';
-
-            // 파일명 형식: S2.png, CK.png 등
             cardImages.push(`${suit.name}${rank}.png`);
         }
     });
 
     // 게임 상태 변수
     let currentLevel = 1;
-    let maxLevel = 100; // 3. 100단계
+    let maxLevel = 100;
     let timer = null;
     let timeLeft = 0;
     let cards = [];
@@ -32,7 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let matchedPairs = 0;
     let totalPairs = 0;
     let isGameActive = false;
-    let isProcessing = false; // 카드 뒤집기 애니메이션 중 클릭 방지
+    let isProcessing = false;
+    let isMuted = false;
 
     // DOM 요소
     const boardEl = document.getElementById('game-board');
@@ -42,8 +40,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalTitle = document.getElementById('modal-title');
     const modalMsg = document.getElementById('modal-msg');
     const modalBtn = document.getElementById('modal-btn');
+    const startOverlay = document.getElementById('start-overlay');
+    const startBtn = document.getElementById('start-btn');
+    const muteBtn = document.getElementById('mute-btn');
 
-    // 5. 브라우저 저장소에서 레벨 불러오기
+    // 오디오 요소
+    const audioBgm = document.getElementById('bgm');
+    const sfxFlip = document.getElementById('sfx-flip');
+    const sfxMatch = document.getElementById('sfx-match');
+    const sfxClear = document.getElementById('sfx-clear');
+
+    // 오디오 볼륨 설정
+    audioBgm.volume = 0.3; // 배경음악은 약간 작게
+    sfxFlip.volume = 0.5;
+    sfxMatch.volume = 0.6;
+    sfxClear.volume = 0.6;
+
+    // === 2. 오디오 기능 ===
+    function playSound(audioElement) {
+        if (isMuted) return;
+        // 연속 재생을 위해 재생 위치를 0으로 초기화
+        audioElement.currentTime = 0;
+        audioElement.play().catch(e => console.log('Audio play error:', e));
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        if (isMuted) {
+            audioBgm.pause();
+            muteBtn.textContent = '🔇';
+        } else {
+            if (isGameActive) audioBgm.play();
+            muteBtn.textContent = '🔊';
+        }
+    }
+
+    muteBtn.addEventListener('click', toggleMute);
+
+    // === 3. 게임 로직 ===
+
     function loadProgress() {
         const savedLevel = localStorage.getItem('memoryGameLevel');
         if (savedLevel) {
@@ -54,27 +89,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 진행 상황 저장
     function saveProgress(level) {
         localStorage.setItem('memoryGameLevel', level);
     }
 
-    // 4. 레벨별 난이도 설정 (카드 수 및 시간)
     function getLevelConfig(level) {
-        // 기본 2쌍(4장)부터 시작
-        // 레벨이 오를수록 쌍의 개수가 늘어남 (최대 24쌍=48장 정도로 제한)
         let pairs = Math.min(2 + Math.floor((level - 1) / 2), 24);
-
-        // 시간: 기본시간 + (쌍 개수 * 난이도 팩터) - (레벨에 따른 감소)
-        // 레벨이 높을수록 카드는 많아지지만 시간 여유는 빡빡해짐
         let baseTime = 10;
         let timePerPair = 5;
         let penalty = Math.floor(level / 5);
         let time = baseTime + (pairs * timePerPair) - penalty;
+        if (time < 10) time = 10;
 
-        if (time < 10) time = 10; // 최소 10초 보장
-
-        // 그리드 컬럼 수 계산 (반응형)
         let cols = 4;
         if (pairs >= 6) cols = 4;
         if (pairs >= 8) cols = 5;
@@ -84,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { pairs, time, cols };
     }
 
-    // 게임 시작
+    // 게임 시작 (초기화)
     function startGame(level) {
         currentLevel = level;
         levelDisplay.textContent = currentLevel;
@@ -100,31 +126,34 @@ document.addEventListener('DOMContentLoaded', () => {
         timeDisplay.textContent = timeLeft;
 
         setupBoard(config);
-        startTimer();
+
+        // UI 및 오디오 처리
+        modal.classList.add('hidden');
+        startOverlay.classList.add('hidden');
         isGameActive = true;
+
+        startTimer();
+
+        if (!isMuted) {
+            audioBgm.play().catch(e => console.log('BGM Autoplay prevented'));
+        }
     }
 
-    // 보드 세팅
     function setupBoard(config) {
         boardEl.innerHTML = '';
         boardEl.style.gridTemplateColumns = `repeat(${config.cols}, 1fr)`;
 
-        // 덱 생성 (필요한 쌍만큼 랜덤 추출)
         let deck = [];
-        // 전체 이미지 풀에서 랜덤하게 필요한 개수만 뽑음
         let shuffledAssets = [...cardImages].sort(() => 0.5 - Math.random());
         let selectedAssets = shuffledAssets.slice(0, config.pairs);
 
-        // 쌍으로 만들기
         selectedAssets.forEach(asset => {
             deck.push(asset);
             deck.push(asset);
         });
 
-        // 덱 섞기
         deck.sort(() => 0.5 - Math.random());
 
-        // 카드 DOM 생성
         deck.forEach((imgSrc, index) => {
             const card = document.createElement('div');
             card.classList.add('card');
@@ -142,16 +171,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // 10. 마우스와 터치 지원 (Click 이벤트로 통합 처리)
             card.addEventListener('click', () => flipCard(card));
             boardEl.appendChild(card);
         });
     }
 
-    // 카드 뒤집기 로직
     function flipCard(card) {
+        // 첫 클릭 버그 수정: 게임 활성화 상태 확인 및 처리 중복 방지 강화
         if (!isGameActive || isProcessing) return;
         if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+        // 효과음 재생
+        playSound(sfxFlip);
 
         card.classList.add('flipped');
         flippedCards.push(card);
@@ -161,22 +192,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 매칭 검사
     function checkForMatch() {
         isProcessing = true;
         const [card1, card2] = flippedCards;
 
         if (card1.dataset.image === card2.dataset.image) {
             // 매칭 성공
-            card1.classList.add('matched');
-            card2.classList.add('matched');
-            matchedPairs++;
-            flippedCards = [];
-            isProcessing = false;
+            // 약간의 딜레이 후 효과음과 처리를 하여 자연스럽게
+            setTimeout(() => {
+                playSound(sfxMatch);
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                flippedCards = [];
+                isProcessing = false;
 
-            if (matchedPairs === totalPairs) {
-                levelClear();
-            }
+                if (matchedPairs === totalPairs) {
+                    levelClear();
+                }
+            }, 200);
         } else {
             // 매칭 실패
             setTimeout(() => {
@@ -184,11 +218,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 card2.classList.remove('flipped');
                 flippedCards = [];
                 isProcessing = false;
-            }, 800); // 0.8초 후 다시 뒤집힘
+            }, 800);
         }
     }
 
-    // 타이머
     function startTimer() {
         if (timer) clearInterval(timer);
         timer = setInterval(() => {
@@ -201,10 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
     }
 
-    // 레벨 클리어
     function levelClear() {
         clearInterval(timer);
         isGameActive = false;
+        audioBgm.pause();
+        playSound(sfxClear); // 클리어 효과음
 
         if (currentLevel >= maxLevel) {
             showModal("축하합니다!", "모든 레벨을 클리어하셨습니다!", "처음으로", () => startGame(1));
@@ -215,16 +249,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 게임 오버
     function gameOver() {
         clearInterval(timer);
         isGameActive = false;
+        audioBgm.pause();
         showModal("시간 초과", "다시 도전해보세요.", "재시작", () => {
             startGame(currentLevel);
         });
     }
 
-    // 모달 표시 함수
     function showModal(title, msg, btnText, callback) {
         modalTitle.textContent = title;
         modalMsg.textContent = msg;
@@ -232,22 +265,18 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.classList.remove('hidden');
 
         modalBtn.onclick = () => {
-            modal.classList.add('hidden');
             callback();
         };
     }
 
-    // 6. F2키 입력 처리
+    // F2키 처리
     window.addEventListener('keydown', (e) => {
         if (e.key === 'F2') {
-            e.preventDefault(); // 브라우저 기본 동작 차단 (필요시)
-            if (isGameActive) {
-                const choice = confirm("현재 게임을 중지하고 새로 시작하시겠습니까?");
+            e.preventDefault();
+            if (isGameActive || !modal.classList.contains('hidden')) {
+                const choice = confirm("게임을 중지하고 새로 시작하시겠습니까?");
                 if (choice) {
                     clearInterval(timer);
-                    // 1레벨부터 다시 할지, 현재 레벨 리셋일지 결정 (여기선 1레벨 리셋으로 간주하거나 현재 레벨 리셋)
-                    // 요구사항: "새 게임을 시작하게 해주세요" -> 보통 초기화를 의미
-                    // 편의상 1레벨로 초기화하여 새로 시작
                     const fullReset = confirm("1레벨부터 초기화 하시겠습니까? (취소 시 현재 레벨 재시작)");
                     if(fullReset) {
                         saveProgress(1);
@@ -260,7 +289,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 초기 실행
+    // === 초기 실행 흐름 수정 (첫 클릭 버그 해결) ===
     loadProgress();
-    startGame(currentLevel);
+
+    // 바로 startGame을 하지 않고, "게임 시작" 버튼 이벤트를 기다림
+    startBtn.addEventListener('click', () => {
+        // 브라우저 오디오 권한 획득을 위해 빈 오디오 재생 시도 등은 필요 없으나,
+        // 사용자 인터랙션 후 BGM 재생은 안전함.
+        startGame(currentLevel);
+    });
 });
