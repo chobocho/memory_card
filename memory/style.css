@@ -1,0 +1,150 @@
+/* 기본 초기화 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none; /* 드래그 방지 */
+}
+
+body {
+    background-color: #2E8B57; /* 2. 보드는 녹색 (SeaGreen) */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 상단 정보창 */
+.game-info {
+    width: 100%;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* 게임 보드 영역 */
+.game-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 20px;
+}
+
+.board {
+    display: grid;
+    gap: 10px;
+    /* 카드가 화면에 꽉 차도록 자동 조절 */
+    max-width: 1000px;
+    max-height: 80vh;
+}
+
+/* 카드 스타일 */
+.card {
+    position: relative;
+    width: 80px; /* 기본 크기 */
+    height: 110px;
+    cursor: pointer;
+    perspective: 1000px; /* 3D 효과 */
+}
+
+.card-inner {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    transition: transform 0.4s;
+    transform-style: preserve-3d;
+}
+
+.card.flipped .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card.matched {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.card-front, .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.card-front {
+    background-color: white;
+    transform: rotateY(180deg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.card-front img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.card-back {
+    background-color: #222;
+}
+
+.card-back img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* 모달 스타일 */
+.modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.hidden { display: none; }
+
+.modal-content {
+    background: white;
+    padding: 30px 50px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.modal-content h2 { margin-bottom: 15px; }
+.modal-content button {
+    padding: 10px 20px;
+    margin-top: 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    background-color: #2E8B57;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+/* 반응형 처리: 화면이 작아지면 카드 크기 줄임 */
+@media (max-width: 600px) {
+    .card { width: 50px; height: 70px; }
+    .board { gap: 5px; }
+}

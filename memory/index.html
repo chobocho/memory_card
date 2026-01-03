@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chobocho's 메모리 게임 V1.0</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="game-info">
+    <div class="info-box">LEVEL <span id="level-display">1</span></div>
+    <div class="info-box">TIME <span id="timer-display">00</span></div>
+    <div class="info-box">F2: 재시작</div>
+</div>
+
+<div class="game-container">
+    <div id="game-board" class="board"></div>
+</div>
+
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modal-title">TITLE</h2>
+        <p id="modal-msg">Message</p>
+        <button id="modal-btn">확인</button>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
