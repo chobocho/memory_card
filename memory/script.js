@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLevel = 1;
     let maxLevel = 100;
     let timer = null;
-    let maxTime = 0; // 타임 바 계산용 전체 시간
+    let maxTime = 0;
     let timeLeft = 0;
     let flippedCards = [];
     let matchedPairs = 0;
@@ -29,13 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let isGameActive = false;
     let isProcessing = false;
     let isMuted = false;
-    let isPaused = false; // 일시 정지 상태
+    let isPaused = false;
 
     // DOM 요소
     const boardEl = document.getElementById('game-board');
     const levelDisplay = document.getElementById('level-display');
     const timeDisplay = document.getElementById('timer-display');
-    const timerBar = document.getElementById('timer-bar'); // 타임 바
+    const timerBar = document.getElementById('timer-bar');
 
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modal-title');
@@ -51,7 +51,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const muteBtn = document.getElementById('mute-btn');
 
-    // 오디오 요소
+    // "F2: 재시작" 버튼 요소를 찾습니다 (HTML에 ID가 없어도 텍스트로 찾음)
+    // 만약 HTML에 id="restart-btn"을 주셨다면 getElementById로 바꾸셔도 됩니다.
+    const allInfoBoxes = document.querySelectorAll('.info-box');
+    let restartBtnEl = null;
+    allInfoBoxes.forEach(box => {
+        if (box.textContent.includes('F2') || box.textContent.includes('재시작')) {
+            restartBtnEl = box;
+            restartBtnEl.style.cursor = 'pointer'; // 마우스 올리면 손가락 모양
+        }
+    });
+
+    // 오디오 요소 (요청하신 로직 유지)
     const sfxFlip = document.getElementById('sfx-flip');
     sfxFlip.src = "data:audio/mp3;base64," + flip_audio;
     const sfxMatch = document.getElementById('sfx-match');
@@ -59,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sfxClear = document.getElementById('sfx-clear');
     sfxClear.src = "data:audio/mp3;base64," + clear_audio;
 
+    // 볼륨 설정
     sfxFlip.volume = 0.5;
     sfxMatch.volume = 0.6;
     sfxClear.volume = 0.6;
@@ -82,20 +94,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === 3. 일시 정지 기능 ===
     function togglePause() {
-        if (!isGameActive || isProcessing) return; // 게임 중이 아니면 무시
+        if (!isGameActive || isProcessing) return;
 
         if (isPaused) {
             // 게임 재개
             isPaused = false;
             pauseOverlay.classList.add('hidden');
             pauseBtn.textContent = '⏸';
-            startTimer(); // 타이머 다시 시작
+            startTimer();
         } else {
             // 일시 정지
             isPaused = true;
             pauseOverlay.classList.remove('hidden');
             pauseBtn.textContent = '▶';
-            clearInterval(timer); // 타이머 멈춤
+            clearInterval(timer);
         }
     }
 
@@ -107,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedLevel = localStorage.getItem('memoryGameLevel');
         currentLevel = savedLevel ? parseInt(savedLevel, 10) : 1;
         if (currentLevel > maxLevel) currentLevel = 1;
+        levelDisplay.textContent = currentLevel; // 로드 시 UI 업데이트
     }
 
     function saveProgress(level) {
@@ -136,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveProgress(currentLevel);
 
         const config = getLevelConfig(currentLevel);
-        maxTime = config.time; // 최대 시간 저장
+        maxTime = config.time;
         timeLeft = config.time;
         totalPairs = config.pairs;
         matchedPairs = 0;
@@ -152,12 +165,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setupBoard(config);
 
+        // UI 상태 업데이트
         modal.classList.add('hidden');
         startOverlay.classList.add('hidden');
         pauseOverlay.classList.add('hidden');
+
         isGameActive = true;
 
-        startTimer();
+        // === 5. 카드 미리보기 로직 (12장 이상 시) ===
+        const totalCards = config.pairs * 2;
+        if (totalCards >= 8) {
+            // 사용자 조작 방지
+            isProcessing = true;
+            let showTimer = 1200;
+            if (totalCards >= 12) {
+                showTimer = 2500;
+            } else if (totalCards >= 24) {
+                showTimer = 4000;
+            } else if (totalCards >= 48) {
+                showTimer = 8000;
+            }
+
+            // 모든 카드 뒤집기 (앞면 표시)
+            const allCards = document.querySelectorAll('.card');
+            allCards.forEach(card => card.classList.add('flipped'));
+
+            // 3초 후 다시 뒤집고 타이머 시작
+            setTimeout(() => {
+                allCards.forEach(card => card.classList.remove('flipped'));
+                isProcessing = false;
+                startTimer(); // 미리보기가 끝난 후 타이머 시작
+            }, 3000);
+        } else {
+            // 12장 이하면 바로 타이머 시작
+            startTimer();
+        }
     }
 
     function setupBoard(config) {
@@ -188,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function flipCard(card) {
-        // 일시 정지 중이면 클릭 무시
         if (!isGameActive || isProcessing || isPaused) return;
         if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
 
@@ -218,7 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (timeLeft < 10) {
                     timeLeft += 5;
                 }
-
                 if (timeLeft < 20) {
                     timeLeft += 5;
                     updateTimeBar();
@@ -238,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateTimeBar() {
         timeDisplay.textContent = timeLeft;
-        // 타임 바 업데이트
         const percentage = (timeLeft / maxTime) * 100;
         timerBar.style.width = `${percentage}%`;
     }
@@ -249,7 +288,6 @@ document.addEventListener('DOMContentLoaded', () => {
             timeLeft--;
             updateTimeBar();
 
-            // 5초 이하 경고 (빨간색)
             if (timeLeft <= 5) {
                 timerBar.classList.add('warning');
             }
@@ -266,19 +304,33 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sfxClear);
 
         if (currentLevel >= maxLevel) {
-            showModal("축하합니다!", "모든 레벨을 클리어하셨습니다!", "처음으로", () => startGame(1));
+            showModal("축하합니다!", "모든 레벨을 클리어하셨습니다!", "처음으로", () => {
+                modal.classList.add('hidden');
+                currentLevel = 1;
+                saveProgress(currentLevel);
+                levelDisplay.textContent = currentLevel;
+                startOverlay.classList.remove('hidden');
+            });
         } else {
-            showModal("성공!", `레벨 ${currentLevel} 클리어!`, "다음 레벨", () => startGame(currentLevel + 1));
+            showModal("성공!", `레벨 ${currentLevel} 클리어!`, "다음 단계 준비", () => {
+                modal.classList.add('hidden');
+                currentLevel++;
+                saveProgress(currentLevel);
+                levelDisplay.textContent = currentLevel;
+                startOverlay.classList.remove('hidden');
+            });
         }
     }
 
     function gameOver() {
         clearInterval(timer);
         isGameActive = false;
-        // 타임 바 0으로 확실히 처리
         timerBar.style.width = '0%';
 
-        showModal("시간 초과", "다시 도전해보세요.", "재시작", () => startGame(currentLevel));
+        showModal("시간 초과", "다시 도전해보세요.", "재시작", () => {
+            modal.classList.add('hidden');
+            startGame(currentLevel);
+        });
     }
 
     function showModal(title, msg, btnText, callback) {
@@ -289,30 +341,44 @@ document.addEventListener('DOMContentLoaded', () => {
         modalBtn.onclick = () => callback();
     }
 
-    // F2키 처리 (일시 정지 오버레이가 떠있어도 동작)
+    // === 재시작 로직 통합 함수 (F2키 & 마우스 클릭 공용) ===
+    function handleRestart() {
+        if (isGameActive || isPaused || !modal.classList.contains('hidden')) {
+            clearInterval(timer);
+            const choice = confirm("게임을 중지하고 새로 시작하시겠습니까?");
+            if (choice) {
+                const fullReset = confirm("1레벨부터 초기화 하시겠습니까? (취소 시 현재 레벨 재시작)");
+                if(fullReset) {
+                    saveProgress(1);
+                    currentLevel = 1;
+                }
+                levelDisplay.textContent = currentLevel;
+                modal.classList.add('hidden');
+                pauseOverlay.classList.add('hidden');
+                startOverlay.classList.remove('hidden');
+                isGameActive = false;
+            } else {
+                if (isGameActive && !isPaused) startTimer();
+            }
+        }
+    }
+
+    // F2 키 이벤트 연결
     window.addEventListener('keydown', (e) => {
         if (e.key === 'F2') {
             e.preventDefault();
-            if (isGameActive || isPaused || !modal.classList.contains('hidden')) {
-                // F2 누르면 일시정지 로직 등으로 꼬이지 않게 타이머 해제 먼저 수행
-                clearInterval(timer);
-                const choice = confirm("게임을 중지하고 새로 시작하시겠습니까?");
-                if (choice) {
-                    const fullReset = confirm("1레벨부터 초기화 하시겠습니까? (취소 시 현재 레벨 재시작)");
-                    if(fullReset) {
-                        saveProgress(1);
-                        startGame(1);
-                    } else {
-                        startGame(currentLevel);
-                    }
-                } else {
-                    // 취소 시 게임이 진행 중이었고 일시정지 상태가 아니었다면 타이머 재개
-                    if (isGameActive && !isPaused) startTimer();
-                }
-            }
+            handleRestart();
         }
     });
 
+    // 4. 재시작 버튼(텍스트) 클릭 이벤트 연결
+    if (restartBtnEl) {
+        restartBtnEl.addEventListener('click', handleRestart);
+    }
+
+    // 초기 실행 로직
     loadProgress();
-    startBtn.addEventListener('click', () => startGame(currentLevel));
+    startBtn.addEventListener('click', () => {
+        startGame(currentLevel);
+    });
 });
